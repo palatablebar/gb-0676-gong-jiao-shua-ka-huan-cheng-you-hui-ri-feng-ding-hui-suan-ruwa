@@ -1,0 +1,6 @@
+event_id,card,route,event_time,result,reported,note
+1001,0001,01,2026-11-16T08:00:00+08:00,success,2.50,å¸¸è§„
+1002,0001,02,2026-11-16T08:20:00+08:00,success,1.50,æ¢ä¹˜ä¼˜æƒ 
+event_id,card,route,event_time,result,reported,note
+1003,0001,1Â·,2026-11-16T08:50:00+08:00,success,1.50,Ôç°à
+1004,0002,03,2026-11-16T09:00:00+08:00,success,2.50,³£¹æ

@@ -20,23 +20,25 @@ docker compose exec -T app pytest -q
 - 5. 优惠回算：`/discounts`，`/api/discounts`。
 - 6. 清分对账：`/clearing`，`/api/clearing`。
 - 7. 日结归档：`/settlement`，`/api/settlement`。
+- 复核证据：`/review`，沿来源字节区间查看解码值、线路归属、换乘和封顶结果，查验卡日应收与封存状态。
 
 ## 核心规则
 
-换乘按上次有效付费行程的时间窗计算，优惠与日封顶按确定顺序裁决并保留分币守恒。
+换乘按上次有效付费行程的时间窗计算，优惠与日封顶按确定顺序裁决并保留分币守恒。月末合并包混合UTF-8与GB18030流水时，按分段表头切字节段逐段判定编码并逐条标注依据，同一字节串全包只许一种解释；任一行无法证明解释前不得封存，裁决全文见 `docs/ADJUDICATION.md`。
 
 ## 演示
 
 1. 打开首页，核对当次计算、差异和隔离原因。
-2. 切换模块查看源行及裁决依据。
-3. 重跑相同样例，批次号与行数保持一致。
-4. 复核后导出一份证据CSV。版本已变化的复核提交返回409。
+2. 切换模块查看源行及裁决依据；打开 `/review` 沿字节区间查验解码值与卡日应收。
+3. 重跑相同样例，批次号与行数保持一致（响应`reused`为真，不新增采信记录）。
+4. 切换样例到"月末合并·混合编码批"，查看同一卡号跨编码合并出的唯一卡日应收。
+5. 复核后导出一份证据CSV。版本已变化的复核提交返回409且旧版完整保留；存在未证明解释行时已复核与导出均返回409。
 
 ## 输入与输出
 
-输入列见 `docs/DATA-DICTIONARY.md`。项目包含dirty.csv、clean.csv、legacy.csv，统一走实际导入路径。上传限制4MB，拒绝不带时区的时间。业务键按字符串保留，Decimal参与计算，空值不会当零。
+输入列见 `docs/DATA-DICTIONARY.md`。项目包含dirty.csv、clean.csv、legacy.csv、mixed.csv，统一走实际导入路径。上传限制4MB，拒绝不带时区的时间。业务键按字符串保留，Decimal参与计算，空值不会当零。
 
-`POST /api/runs` 接收sample或csv；`GET /api/runs`返回历史批次；`POST /api/runs/<id>/review`需要version与decision；`GET /api/runs/<id>/archive`返回唯一证据导出。
+`POST /api/runs` 接收sample或csv；`GET /api/runs`返回历史批次；`POST /api/runs/<id>/review`需要version与decision；`GET /api/runs/<id>/bytes`按字节区间回读原始包；`GET /api/runs/<id>/archive`返回唯一证据导出。原始字节按摘要入库只增不删。
 
 ## 范围
 

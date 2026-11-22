@@ -26,6 +26,11 @@
 | TRAP-14 | 重复键冲突 | 后写覆盖 | 保留首条并隔离冲突行 | `app/modules/m1_taps/rules.py` | `tests/test_m1.py::test_duplicate_conflict_real_sample` |
 | TRAP-18 | 空态三态 | 一律成功 | 分别错误码 | `app/modules/m1_taps/rules.py` | `tests/test_m1.py::test_three_empty_states` |
 | TRAP-26 | 旧版本提交 | 覆盖新结果 | 版本条件更新 | `app/store.py` | `tests/test_e2e.py::test_stale_review_409` |
+| TRAP-27 | 混合编码整包误读 | 单一编码兜底 | 按分段表头切字节段逐段判定 | `app/modules/m1_taps/rules.py` | `tests/test_m1.py::test_mixed_sample_two_segments` |
+| TRAP-28 | 双解字节 | 默选UTF-8 | 领域评分+保证金，不足即隔离 | `app/modules/m1_taps/rules.py` | `tests/test_m1.py::test_dual_valid_bytes_scored_gb18030` |
+| TRAP-29 | 同字节双解释 | 各自采信 | 字段级冲突全部隔离 | `app/modules/m1_taps/rules.py` | `tests/test_m1.py::test_interpretation_conflict` |
+| TRAP-30 | 字节漏算重算 | 仅行数对平 | 字节区间铺满校验 | `app/modules/m6_clearing/rules.py` | `tests/test_seal.py::test_byte_coverage_balanced` |
+| TRAP-31 | 未证明即封存 | 隔离即归档 | 未证明行阻断封存与导出 | `app/store.py` | `tests/test_seal.py::test_unproven_blocks_seal_and_archive` |
 | TRAP-06 | 全角数字 | 转换失败 | NFKC与Decimal | `app/values.py` | `tests/test_m3.py::test_thousands_and_fullwidth` |
 | TRAP-07 | 金额哨兵 | 零参与扣费 | 空值隔离 | `app/values.py` | `tests/test_m3.py::test_real_sentinel_quarantined` |
 | TRAP-11 | 混合偏移 | 落错版本 | UTC归整 | `app/values.py` | `tests/test_m3.py::test_timezone_equal` |
@@ -36,6 +41,8 @@
 
 输入原始逻辑行=最终采纳来源行+隔离来源行+重复行+空白行+分段表头。派生记录用_sources保存完整来源，因此分组不丢行。业务预期合计与上游申报合计之差等于逐行差异之和。结果按输入摘要、规则版本及参数产生唯一批次，事务写入；同源重跑只复用已有批次。
 
+编码采信见 `docs/ADJUDICATION.md`：合并包按分段表头切字节段，每段唯一编码并逐行记录字节区间、编码与判定依据；同一字节串在全包只得一种解释。字节级对平要求采纳行、隔离行与排除项的字节区间恰好铺满原包，不重叠不留洞。卡日应收按（卡号，业务日）唯一聚合；任一行无法证明解释（UNDECODABLE/AMBIGUOUS_DECODING/INTERPRETATION_CONFLICT）时批次不得封存，已复核提交与证据导出均返回409。原始字节按摘要存入blobs表只增不删，无删除接口。
+
 ## 已知不覆盖
 
-4MB以上文件需预先按业务键分批；不模拟生产支付与外部回调。人工复核只变更批次状态，不改写原始记录。
+4MB以上文件需预先按业务键分批；不模拟生产支付与外部回调。人工复核只变更批次状态，不改写原始记录。段内逐行抢救不实施：一段无法证明即整段隔离，须更正来源包重新上传（新摘要、新批次），系统不替人裁决。

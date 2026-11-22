@@ -40,10 +40,16 @@ def create_app():
         p=request.get_json(silent=True) or {}
         if not isinstance(p.get("version"),int): raise DomainError("BAD_VERSION","请提供版本号")
         return store.review(run_id,p["version"],p.get("decision"))
+    @application.get("/api/runs/<run_id>/bytes")
+    def run_bytes(run_id):
+        start=request.args.get("start",type=int);end=request.args.get("end",type=int)
+        if start is None or end is None: raise DomainError("BAD_RANGE","请提供字节区间")
+        return store.source_slice(run_id,start,end)
     @application.get("/api/runs/<run_id>/archive")
     def archive(run_id):
         from app.archive import build_archive
         run=store.get(run_id)
+        if run["stages"][-1]["metrics"].get("unproven"): raise DomainError("UNPROVEN_INTERPRETATION","存在无法证明解释的来源行，不得封存",409)
         return application.response_class(build_archive(run),mimetype="text/csv",headers={"Content-Disposition":'attachment; filename="evidence.csv"'})
     for index,(slug,title) in enumerate(MODULES,1):
         module=importlib.import_module(f"app.modules.m{index}_{slug}.handler")
